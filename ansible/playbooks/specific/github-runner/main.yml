@@ -4,7 +4,28 @@
   become: true
   vars:
     runner_token: "{{ vault_github_runner_token }}"
+    runner_user: github-runner
   tasks:
+    - name: Check if sudo is installed
+      command: which sudo
+      register: sudo_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install sudo if not present
+      apt:
+        name: sudo
+        state: present
+        update_cache: yes
+      when: sudo_check.rc != 0
+
+    - name: Create sudoers file for runner user
+      copy:
+        content: "{{ runner_user }} ALL=(ALL) NOPASSWD: ALL"
+        dest: "/etc/sudoers.d/{{ runner_user }}"
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
     - name: Install required packages
       apt:
         name:
@@ -16,11 +37,29 @@
         state: present
         update_cache: yes
 
+    - name: Create runner user
+      user:
+        name: "{{ runner_user }}"
+        shell: /bin/bash
+        create_home: yes
+        groups: sudo
+        append: yes
+
     - name: Create runner directory
       file:
         path: /opt/github-runner
         state: directory
         mode: '0755'
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
+
+    - name: Create runner diagnostic directory
+      file:
+        path: /opt/github-runner/_diag
+        state: directory
+        mode: '0755'
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
 
     - name: Get latest runner version
       uri:
@@ -36,6 +75,8 @@
       get_url:
         url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
         dest: /opt/github-runner/actions-runner.tar.gz
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
       register: download_runner
 
     - name: Extract runner package
@@ -43,12 +84,28 @@
         src: /opt/github-runner/actions-runner.tar.gz
         dest: /opt/github-runner
         remote_src: yes
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
 
     - name: Install runner dependencies
-      shell: ./bin/installdependencies.sh
+      shell: sudo ./bin/installdependencies.sh
       args:
         chdir: /opt/github-runner
         creates: /opt/github-runner/.installed
+      become: yes
+      become_user: "{{ runner_user }}"
+
+    - name: Set proper permissions on runner scripts
+      file:
+        path: "{{ item }}"
+        mode: '0755'
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
+      with_items:
+        - /opt/github-runner/run.sh
+        - /opt/github-runner/config.sh
+        - /opt/github-runner/bin/installdependencies.sh
+        - /opt/github-runner/bin/runsvc.sh
 
     - name: Create runner service
       template:
@@ -56,15 +113,30 @@
         dest: /etc/systemd/system/github-runner.service
         mode: '0644'
 
-    - name: Create runner configuration script
-      template:
-        src: configure-runner.sh.j2
-        dest: /opt/github-runner/configure-runner.sh
-        mode: '0755'
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
 
     - name: Create runner token file
       copy:
         content: "{{ runner_token }}"
         dest: /opt/github-runner/.runner_token
         mode: '0600'
-      no_log: true 
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
+      no_log: true
+
+    - name: Configure runner
+      shell: |
+        cd /opt/github-runner
+        ./config.sh --url {{ repo_url }} --token $(cat .runner_token) --name "{{ inventory_hostname }}" --unattended --work _work --replace
+      args:
+        creates: /opt/github-runner/.runner
+      become: yes
+      become_user: "{{ runner_user }}"
+
+    - name: Start and enable runner service
+      systemd:
+        name: github-runner
+        state: started
+        enabled: yes 

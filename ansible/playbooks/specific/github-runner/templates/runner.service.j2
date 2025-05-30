@@ -4,10 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
+User={{ runner_user }}
+Group={{ runner_user }}
 WorkingDirectory=/opt/github-runner
-ExecStart=/opt/github-runner/run.sh
+ExecStart=/opt/github-runner/bin/runsvc.sh
 Restart=always
 RestartSec=10
+Environment=HOME=/opt/github-runner
+Environment=GITHUB_RUNNER_HOME=/opt/github-runner
 
 [Install]
 WantedBy=multi-user.target 

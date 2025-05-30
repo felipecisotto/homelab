@@ -4,8 +4,8 @@
 TOKEN=$(cat /opt/github-runner/.runner_token)
 
 # Configure the runner
-./config.sh --url https://github.com/{{ github_org }} --token $TOKEN --name "{{ inventory_hostname }}" --unattended --work _work
+./config.sh --url https://github.com/{{ github_org }} --token $TOKEN --name "{{ inventory_hostname }}" --unattended --work _work --replace
 
 # Start the runner service
-sudo systemctl enable github-runner
-sudo systemctl start github-runner 
+systemctl enable github-runner
+systemctl start github-runner 

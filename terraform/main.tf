@@ -92,5 +92,6 @@ resource "proxmox_lxc" "github-runner" {
     ip     = "192.168.0.207/24"
     gw     = "192.168.0.254"
   }
+  password = "felipe"
   ssh_public_keys = var.ssh_key
 }

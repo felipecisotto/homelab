@@ -1,6 +1,6 @@
 ---
-# GitHub organization or username
-github_org: felipecisotto
+# GitHub repository URL
+repo_url: https://github.com/felipecisotto/homelab
 
 # Runner version (optional)
 runner_version: 2.311.0 

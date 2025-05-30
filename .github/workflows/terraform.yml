@@ -66,6 +66,16 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
+      - name: Create terraform.tfvars
+        run: |
+          cd terraform/${{ matrix.module }}
+          cat > terraform.tfvars << EOF
+          token_secret = "${{ secrets.TOKEN_SECRET }}"
+          token_id = "${{ secrets.TOKEN_ID }}"
+          api_url = "${{ secrets.API_URL }}"
+          ssh_key = "${{ secrets.SSH_KEY }}"
+          EOF
+
       - name: Terraform Init
         run: |
           cd terraform/${{ matrix.module }}
