@@ -68,7 +68,7 @@ jobs:
 
       - name: Create terraform.tfvars
         run: |
-          cd terraform/${{ matrix.module }}
+          cd terraform
           cat > terraform.tfvars << EOF
           token_secret = "${{ secrets.TOKEN_SECRET }}"
           token_id = "${{ secrets.TOKEN_ID }}"
@@ -78,16 +78,16 @@ jobs:
 
       - name: Terraform Init
         run: |
-          cd terraform/${{ matrix.module }}
+          cd terraform
           terraform init
 
       - name: Terraform Plan
         run: |
-          cd terraform/${{ matrix.module }}
+          cd terraform
           terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: |
-          cd terraform/${{ matrix.module }}
+          cd terraform
           terraform apply -auto-approve tfplan 
