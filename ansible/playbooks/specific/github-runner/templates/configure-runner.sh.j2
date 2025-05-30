@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Read token from file
+TOKEN=$(cat /opt/github-runner/.runner_token)
+
+# Configure the runner
+./config.sh --url https://github.com/{{ github_org }} --token $TOKEN --name "{{ inventory_hostname }}" --unattended --work _work
+
+# Start the runner service
+sudo systemctl enable github-runner
+sudo systemctl start github-runner 

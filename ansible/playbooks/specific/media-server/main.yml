@@ -1,0 +1,13 @@
+---
+- name: Configure media-server
+  hosts: media-server
+  become: true
+  tasks:
+    - name: Include update playbook
+      ansible.builtin.import_playbook: ../../../all/update.yml
+
+    - name: Include Docker playbook
+      ansible.builtin.import_playbook: ../../../docker/main.yml
+
+    - name: Include NVIDIA playbook
+      ansible.builtin.import_playbook: ../../../nvidia/main.yml 

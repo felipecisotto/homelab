@@ -1,0 +1,21 @@
+all:
+  children:
+    docker:
+      hosts:
+        media-server:
+    nvidia:
+      hosts:
+        media-server:
+    github-runner:
+      hosts:
+        gh-runner:
+          ansible_user: root
+    # Você pode adicionar mais grupos aqui, por exemplo:
+    # webservers:
+    #   hosts:
+    #     web1:
+    #       ansible_user: ubuntu
+    #       ansible_ssh_private_key_file: ~/.ssh/homelab
+    #     web2:
+    #       ansible_user: ubuntu
+    #       ansible_ssh_private_key_file: ~/.ssh/homelab

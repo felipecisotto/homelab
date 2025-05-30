@@ -1,0 +1,34 @@
+---
+- name: Install NVIDIA drivers
+  hosts: nvidia
+  become: true
+  tasks:
+    - name: Remove existing NVIDIA drivers
+      apt:
+        name: "nvidia*"
+        state: absent
+        purge: yes
+        autoremove: yes
+
+    - name: Install ubuntu-drivers-common
+      apt:
+        name: ubuntu-drivers-common
+        state: present
+
+    - name: Install NVIDIA driver 535
+      apt:
+        name: nvidia-driver-535
+        state: present
+
+    - name: Install NVIDIA CUDA Toolkit
+      apt:
+        name: nvidia-cuda-toolkit
+        state: present
+
+    - name: Reboot the system
+      reboot:
+        msg: "Reboot initiated by Ansible after NVIDIA driver installation"
+        reboot_timeout: 3600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami 

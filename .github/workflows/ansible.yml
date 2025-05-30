@@ -1,0 +1,88 @@
+name: Ansible CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ansible/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ansible/**'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          files: |
+            ansible/playbooks/**/*.yml
+            ansible/roles/**/*.yml
+            ansible/group_vars/**/*.yml
+            ansible/host_vars/**/*.yml
+
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          CHANGED_FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          MATRIX="{\"include\":["
+          
+          # Process each changed file
+          while IFS= read -r file; do
+            if [[ $file == ansible/playbooks/* ]]; then
+              # Extract playbook path
+              PLAYBOOK_PATH=$(echo $file | sed 's/ansible\///')
+              MATRIX+="{\"playbook\":\"$PLAYBOOK_PATH\"},"
+            fi
+          done <<< "$CHANGED_FILES"
+          
+          # Remove trailing comma and close JSON
+          MATRIX=${MATRIX%,}
+          MATRIX+="]}"
+          
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  run-ansible:
+    needs: detect-changes
+    runs-on: self-hosted
+    if: ${{ needs.detect-changes.outputs.matrix != '{"include":[]}' }}
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Create vault password file
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
+      - name: Create vault file with runner token
+        run: |
+          echo "vault_github_runner_token: ${{ secrets.GITHUB_RUNNER_TOKEN }}" > group_vars/github-runner/vault.yml
+          ansible-vault encrypt group_vars/github-runner/vault.yml --vault-password-file .vault_pass
+
+      - name: Run Ansible playbook
+        run: |
+          cd ansible
+          ansible-playbook ${{ matrix.playbook }} --vault-password-file ../.vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Cleanup
+        run: |
+          rm -f .vault_pass
+          rm -f group_vars/github-runner/vault.yml 

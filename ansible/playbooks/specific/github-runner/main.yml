@@ -1,0 +1,70 @@
+---
+- name: Configure GitHub Actions Runner
+  hosts: github-runner
+  become: true
+  vars:
+    runner_token: "{{ vault_github_runner_token }}"
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - sudo
+          - git
+          - jq
+          - unzip
+        state: present
+        update_cache: yes
+
+    - name: Create runner directory
+      file:
+        path: /opt/github-runner
+        state: directory
+        mode: '0755'
+
+    - name: Get latest runner version
+      uri:
+        url: https://api.github.com/repos/actions/runner/releases/latest
+        return_content: yes
+      register: latest_release
+
+    - name: Set runner version
+      set_fact:
+        runner_version: "{{ latest_release.json.tag_name | regex_replace('^v', '') }}"
+
+    - name: Download runner package
+      get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+        dest: /opt/github-runner/actions-runner.tar.gz
+      register: download_runner
+
+    - name: Extract runner package
+      unarchive:
+        src: /opt/github-runner/actions-runner.tar.gz
+        dest: /opt/github-runner
+        remote_src: yes
+
+    - name: Install runner dependencies
+      shell: ./bin/installdependencies.sh
+      args:
+        chdir: /opt/github-runner
+        creates: /opt/github-runner/.installed
+
+    - name: Create runner service
+      template:
+        src: runner.service.j2
+        dest: /etc/systemd/system/github-runner.service
+        mode: '0644'
+
+    - name: Create runner configuration script
+      template:
+        src: configure-runner.sh.j2
+        dest: /opt/github-runner/configure-runner.sh
+        mode: '0755'
+
+    - name: Create runner token file
+      copy:
+        content: "{{ runner_token }}"
+        dest: /opt/github-runner/.runner_token
+        mode: '0600'
+      no_log: true 

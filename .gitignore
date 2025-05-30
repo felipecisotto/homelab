@@ -1,0 +1,5 @@
+ansible/.vault_pass
+terraform/.terraform.lock.hcl
+terraform/.terraform
+terraform/terraform.tfvars
+terraform/terraform.tfstate*
