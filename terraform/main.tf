@@ -24,8 +24,9 @@ resource "proxmox_vm_qemu" "my-vm" {
   target_node = "proxmox"
   clone       = "ubuntu-template"
   full_clone  = true
-  memory      = 4096
+  memory      = 8192
   scsihw      = "virtio-scsi-pci"
+  onboot      = true
   disks {
     ide {
       ide2 {
@@ -75,7 +76,6 @@ resource "proxmox_vm_qemu" "my-vm" {
   serial {
     id = 0
   }
-
 }
 
 resource "proxmox_lxc" "github-runner" {
@@ -90,6 +90,44 @@ resource "proxmox_lxc" "github-runner" {
     name   = "eth0"
     bridge = "vmbr0"
     ip     = "192.168.0.207/24"
+    gw     = "192.168.0.254"
+  }
+  password = "felipe"
+  ssh_public_keys = var.ssh_key
+}
+
+resource "proxmox_lxc" "caddy" {
+  hostname    = "caddy"
+  target_node = "proxmox"
+  ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  rootfs {
+    storage = "local-lvm"
+    size    = "5G"
+  }
+  network {
+    name   = "eth0"
+    bridge = "vmbr0"
+    ip     = "192.168.0.212/24"
+    gw     = "192.168.0.254"
+  }
+  password = "felipe"
+  ssh_public_keys = var.ssh_key
+}
+
+resource "proxmox_lxc" "kafka" {
+  hostname    = "kafka"
+  target_node = "proxmox"
+  ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  memory      = 2048
+  unprivileged  = false
+  rootfs {
+    storage = "local-lvm"
+    size    = "10G"
+  }
+  network {
+    name   = "eth0"
+    bridge = "vmbr0"
+    ip     = "192.168.0.213/24"
     gw     = "192.168.0.254"
   }
   password = "felipe"

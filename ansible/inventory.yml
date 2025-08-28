@@ -1,8 +1,13 @@
 all:
+  hosts:
+    caddy:
+      ansible_user: root
   children:
     docker:
       hosts:
-        media-server:
+        # media-server:
+        kafka:
+          ansible_user: root
     nvidia:
       hosts:
         media-server:

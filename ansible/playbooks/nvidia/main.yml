@@ -3,12 +3,12 @@
   hosts: nvidia
   become: true
   tasks:
-    - name: Remove existing NVIDIA drivers
-      apt:
-        name: "nvidia*"
-        state: absent
-        purge: yes
-        autoremove: yes
+    # - name: Remove existing NVIDIA drivers
+    #   apt:
+    #     name: "nvidia*"
+    #     state: absent
+    #     purge: yes
+    #     autoremove: yes
 
     - name: Install ubuntu-drivers-common
       apt:
@@ -24,6 +24,57 @@
       apt:
         name: nvidia-cuda-toolkit
         state: present
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - ca-certificates
+          - gnupg
+        state: present
+
+    - name: Add NVIDIA Container Toolkit GPG key
+      shell: |
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Add NVIDIA Container Toolkit repository
+      shell: |
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      args:
+        creates: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install NVIDIA Container Toolkit
+      apt:
+        name: nvidia-container-toolkit
+        state: present
+
+    - name: Configure Docker to use NVIDIA Container Toolkit
+      copy:
+        content: |
+          {
+            "default-runtime": "nvidia",
+            "runtimes": {
+                "nvidia": {
+                    "path": "nvidia-container-runtime",
+                    "runtimeArgs": []
+                }
+            }
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+
+    - name: Restart Docker service
+      systemd:
+        name: docker
+        state: restarted
 
     - name: Reboot the system
       reboot:
