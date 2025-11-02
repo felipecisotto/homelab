@@ -133,3 +133,23 @@ resource "proxmox_lxc" "kafka" {
   password = "felipe"
   ssh_public_keys = var.ssh_key
 }
+
+resource "proxmox_lxc" "cf_tunnel" {
+  hostname    = "cf-tunnel"
+  target_node = "proxmox"
+  ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  onboot      = true
+  rootfs {
+    storage = "local-lvm"
+    size    = "5G"
+  }
+  network {
+    name   = "eth0"
+    bridge = "vmbr0"
+    ip     = "192.168.0.214/24"
+    gw     = "192.168.0.254"
+  }
+  password = "felipe"
+  ssh_public_keys = var.ssh_key
+
+}
