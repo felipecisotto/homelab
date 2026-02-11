@@ -78,10 +78,12 @@ resource "proxmox_vm_qemu" "my-vm" {
   }
 }
 
-resource "proxmox_lxc" "github-runner" {
-  hostname    = "github-runner"
+resource "proxmox_lxc" "tang" {
+  hostname    = "tang"
   target_node = "proxmox"
   ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  onboot      = true
+  startup     = "order=1,up=10"
   rootfs {
     storage = "local-lvm"
     size    = "10G"
@@ -89,7 +91,7 @@ resource "proxmox_lxc" "github-runner" {
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    ip     = "192.168.0.207/24"
+    ip     = "192.168.0.215/24"
     gw     = "192.168.0.254"
   }
   password = "felipe"
