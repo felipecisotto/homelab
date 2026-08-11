@@ -169,6 +169,7 @@ resource "proxmox_vm_qemu" "omv" {
   cpu {
     cores   = 2
     sockets = 1
+    numa    = true
   }
   machine = "q35"
   network {
