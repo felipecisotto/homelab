@@ -5,7 +5,8 @@ variable "token_secret" {
 variable "token_id" {
 }
 variable "api_url" {
-  default = "https://proxmox.felipecisotto.com.br/api2/json"
+  # default = "https://proxmox.felipecisotto.com.br/api2/json"
+  default = "https://192.168.0.199:8006/api2/json"
 }
 variable "ssh_key" {
 }

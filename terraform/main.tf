@@ -16,7 +16,7 @@ provider "proxmox" {
   # References our secrets.tfvars to plug in our token_secret 
   pm_api_token_secret = var.token_secret
   # Default to `true` unless you have TLS working within your pve setup 
-  pm_tls_insecure = false
+  pm_tls_insecure = true
 }
 
 resource "proxmox_vm_qemu" "my-vm" {
@@ -52,7 +52,7 @@ resource "proxmox_vm_qemu" "my-vm" {
   }
   ciuser     = "ubuntu"
   cipassword = "felipe"
-  ipconfig0  = "ip=192.168.0.206/24,gw=192.168.0.254"
+  ipconfig0  = "ip=192.168.0.206/24,gw=192.168.0.1"
   sshkeys    = var.ssh_key
   cpu {
     cores   = 4
@@ -76,6 +76,9 @@ resource "proxmox_vm_qemu" "my-vm" {
   serial {
     id = 0
   }
+  lifecycle {
+    ignore_changes = [disks]
+  }
 }
 
 resource "proxmox_lxc" "tang" {
@@ -92,36 +95,19 @@ resource "proxmox_lxc" "tang" {
     name   = "eth0"
     bridge = "vmbr0"
     ip     = "192.168.0.215/24"
-    gw     = "192.168.0.254"
+    gw     = "192.168.0.1"
   }
-  password = "felipe"
+  password        = "felipe"
   ssh_public_keys = var.ssh_key
 }
 
-resource "proxmox_lxc" "caddy" {
-  hostname    = "caddy"
-  target_node = "proxmox"
-  ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  rootfs {
-    storage = "local-lvm"
-    size    = "5G"
-  }
-  network {
-    name   = "eth0"
-    bridge = "vmbr0"
-    ip     = "192.168.0.212/24"
-    gw     = "192.168.0.254"
-  }
-  password = "felipe"
-  ssh_public_keys = var.ssh_key
-}
 
 resource "proxmox_lxc" "kafka" {
-  hostname    = "kafka"
-  target_node = "proxmox"
-  ostemplate  = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  memory      = 2048
-  unprivileged  = false
+  hostname     = "kafka"
+  target_node  = "proxmox"
+  ostemplate   = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  memory       = 2048
+  unprivileged = false
   rootfs {
     storage = "local-lvm"
     size    = "10G"
@@ -130,9 +116,9 @@ resource "proxmox_lxc" "kafka" {
     name   = "eth0"
     bridge = "vmbr0"
     ip     = "192.168.0.213/24"
-    gw     = "192.168.0.254"
+    gw     = "192.168.0.1"
   }
-  password = "felipe"
+  password        = "felipe"
   ssh_public_keys = var.ssh_key
 }
 
@@ -149,9 +135,58 @@ resource "proxmox_lxc" "cf_tunnel" {
     name   = "eth0"
     bridge = "vmbr0"
     ip     = "192.168.0.214/24"
-    gw     = "192.168.0.254"
+    gw     = "192.168.0.1"
   }
-  password = "felipe"
+  password        = "felipe"
   ssh_public_keys = var.ssh_key
+}
 
+resource "proxmox_vm_qemu" "omv" {
+  name        = "omv"
+  target_node = "proxmox"
+  memory      = 4096
+  scsihw      = "virtio-scsi-pci"
+  onboot      = true
+  hotplug     = "disk,network,usb,memory"
+  disks {
+    ide {
+      ide2 {
+        cdrom {
+          iso = "local:iso/openmediavault_8.3.1-amd64.iso"
+        }
+      }
+    }
+    scsi {
+      scsi0 {
+        disk {
+          storage    = "local-lvm"
+          size       = "16G"
+          emulatessd = true
+        }
+      }
+    }
+  }
+  cpu {
+    cores   = 2
+    sockets = 1
+  }
+  machine = "q35"
+  network {
+    id     = 0
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+  network {
+    id     = 1
+    bridge = "vmbr1"
+    model  = "virtio"
+    mtu    = 9000
+  }
+  serial {
+    id = 0
+  }
+
+  lifecycle {
+    ignore_changes = [disks]
+  }
 }
